@@ -1,109 +1,89 @@
 const router = require("express").Router();
-const { check , validationResult } = require("express-validator");
-const {users} = require("../database");
-const bcrypt = require("bcrypt");
-const JWT = require("jsonwebtoken");
+const { users } = require("../database")
+const bcrypt = require('bcrypt');
+const JWT = require("jsonwebtoken")
+const { check, validationResult } = require("express-validator");
 
+// signup
 router.post("/signup", [
-    check("email","Please provide a valid email")
+    check("email", "Please input a valid email")
         .isEmail(),
-    check("password","Please provide a password that is greater than 5 characters")
-        .isLength({
-            min: 6
-        })
-] , async (req,res) => {
-    const { password , email } = req.body;
+    check("password", "Please input a password with a min length of 6")
+        .isLength({ min: 6 })
+], async (req, res) => {
+    const { email, password } = req.body;
 
-    // VALIDATED THE INPUT
     const errors = validationResult(req);
 
-    console.log(password,email);
-
-    if(password.length < 6);
-    if(!errors.isEmpty()){
-        return res.status(400).json({
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
             errors: errors.array()
-        });
+        })
     }
-
-    // VALIDATE IF USER DOESN'T ALREADY EXIST
-
     let user = users.find((user) => {
-        return user.email === email;
+        return user.email === email
     });
 
-    if(user){
-        return res.status(400).json({
-            "errors": [
+    if (user) {
+        return res.status(422).json({
+            errors: [
                 {
-                    "msg" : "This user already exists"
+                    msg: "This user already exists",
                 }
             ]
         })
     }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const hashedPassword = await bcrypt.hash(password,10);
 
     users.push({
         email,
         password: hashedPassword
-    })
-    
-    const token = await JWT.sign({
-        email
-    },"jehfshekf47259834wsjjkgvnd", {
-        expiresIn: 3600000
     });
+
+    const token = await JWT.sign({ email }, "f932bg932g93657", { expiresIn: 360000 });
 
     res.json({
         token
     })
-
-});
-
-router.post('/login', async (req,res) => {
-    const {password,email} = req.body;
+})
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body
 
     let user = users.find((user) => {
-        return user.email === email;
+        return user.email === email
     });
 
-    if(!user){
-        return res.status(400).json({
-            "errors": [
+    if (!user) {
+        return res.status(422).json({
+            errors: [
                 {
-                    "msg" : "Invalid Credentials"
+                    msg: "Invalid Credentials",
                 }
             ]
         })
-    };
+    }
 
+    // Check if the password if valid
     let isMatch = await bcrypt.compare(password, user.password);
 
-    if(!isMatch){
-        return res.status(400).json({
-            "errors": [
+    if (!isMatch) {
+        return res.status(404).json({
+            errors: [
                 {
-                    "msg" : "Invalid Credentials"
+                    msg: "Invalid Credentials"
                 }
             ]
         })
-    };
-
-    const token = await JWT.sign({
-        email
-    },"jehfshekf47259834wsjjkgvnd", {
-        expiresIn: 3600000
-    });
+    }
+    const token = await JWT.sign({ email }, "ksdjfidmcieimddim393ks", { expiresIn: 360000 })
 
     res.json({
         token
     })
-
-});
-
-router.get('/all' , (req,res) => {
-    res.json(users);
+})
+router.get("/all", (req, res) => {
+    res.json(users)
 })
 
 module.exports = router;
